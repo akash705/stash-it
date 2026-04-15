@@ -18,6 +18,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,17 +69,19 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Skip button — top right
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onComplete) {
-                Text("Skip")
+                Text(
+                    "Skip",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
-        // Pager
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f),
@@ -110,10 +113,9 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             }
         }
 
-        // Page indicators
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(bottom = 24.dp),
+            modifier = Modifier.padding(bottom = 32.dp),
         ) {
             repeat(pages.size) { index ->
                 Box(
@@ -130,7 +132,6 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             }
         }
 
-        // Bottom button
         AnimatedVisibility(visible = isLastPage, enter = fadeIn()) {
             Button(
                 onClick = onComplete,
@@ -138,6 +139,9 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
             ) {
                 Text("Get Started", style = MaterialTheme.typography.labelLarge)
             }
@@ -154,8 +158,11 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
             ) {
-                Text("Next", style = MaterialTheme.typography.labelLarge)
+                Text("Next  \u2192", style = MaterialTheme.typography.labelLarge)
             }
         }
 

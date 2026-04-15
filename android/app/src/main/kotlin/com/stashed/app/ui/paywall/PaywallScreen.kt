@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -35,12 +32,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stashed.app.billing.BillingManager
 
-/**
- * Bottom sheet paywall shown when:
- *   - User hits the 50-memory limit (free tier)
- *   - User taps a premium-only feature (voice, widget, location history)
- *   - User manually opens "Go Premium" from settings
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaywallBottomSheet(
@@ -54,6 +45,8 @@ fun PaywallBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
@@ -78,7 +71,6 @@ fun PaywallBottomSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Feature comparison
             ComparisonTable()
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -106,8 +98,14 @@ fun PaywallBottomSheet(
                             .fillMaxWidth()
                             .height(52.dp),
                         shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
                     ) {
-                        Text("$label — $price")
+                        Text(
+                            "$label \u2014 $price",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 } else {
                     OutlinedButton(
@@ -117,14 +115,16 @@ fun PaywallBottomSheet(
                             .height(52.dp),
                         shape = MaterialTheme.shapes.medium,
                     ) {
-                        Text("$label — $price")
+                        Text(
+                            "$label \u2014 $price",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Fallback when products haven't loaded yet
             if (products.isEmpty()) {
                 Text(
                     text = "Loading plans...",
@@ -136,7 +136,11 @@ fun PaywallBottomSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onDismiss) {
-                Text("Not now")
+                Text(
+                    "Not now",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -155,11 +159,11 @@ private fun ComparisonTable() {
         Column(modifier = Modifier.padding(16.dp)) {
             ComparisonRow("Feature", "Free", "Premium", isHeader = true)
             ComparisonRow("Saved memories", "50", "Unlimited")
-            ComparisonRow("Semantic search", "✗", "✓")
-            ComparisonRow("Voice input", "✗", "✓")
-            ComparisonRow("Home widget", "✗", "✓")
-            ComparisonRow("Location history", "✗", "✓")
-            ComparisonRow("Backup & export", "✗", "✓")
+            ComparisonRow("Semantic search", "\u2717", "\u2713")
+            ComparisonRow("Voice input", "\u2717", "\u2713")
+            ComparisonRow("Home widget", "\u2717", "\u2713")
+            ComparisonRow("Location history", "\u2717", "\u2713")
+            ComparisonRow("Backup & export", "\u2717", "\u2713")
         }
     }
 }
@@ -189,7 +193,7 @@ private fun ComparisonRow(
             textAlign = TextAlign.Center,
             style = if (isHeader) MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     else MaterialTheme.typography.bodyMedium,
-            color = if (!isHeader && free == "✗") MaterialTheme.colorScheme.outline
+            color = if (!isHeader && free == "\u2717") MaterialTheme.colorScheme.outline
                     else MaterialTheme.colorScheme.onSurface,
         )
         Text(
@@ -198,7 +202,7 @@ private fun ComparisonRow(
             textAlign = TextAlign.Center,
             style = if (isHeader) MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     else MaterialTheme.typography.bodyMedium,
-            color = if (!isHeader && premium == "✓") MaterialTheme.colorScheme.primary
+            color = if (!isHeader && premium == "\u2713") MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface,
         )
     }

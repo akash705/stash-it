@@ -13,9 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,7 +63,7 @@ fun MemoryListScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("📦", style = MaterialTheme.typography.headlineLarge)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "Nothing stashed yet",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -80,11 +80,10 @@ fun MemoryListScreen(
                                 onDelete = {
                                     viewModel.delete(memory.id)
                                     scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
+                                        snackbarHostState.showSnackbar(
                                             message = "Deleted",
                                             actionLabel = "Undo",
                                         )
-                                        // Undo is a Phase 2 concern — would need a soft-delete mechanism
                                     }
                                 },
                             ) {
@@ -106,7 +105,6 @@ fun MemoryListScreen(
         )
     }
 
-    // Edit dialog
     editingMemory?.let { memory ->
         EditMemoryDialog(
             memory = memory,
@@ -134,7 +132,12 @@ private fun EditMemoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit memory") },
+        title = {
+            Text(
+                "Edit memory",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(
@@ -143,6 +146,11 @@ private fun EditMemoryDialog(
                     label = { Text("Item") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -151,9 +159,13 @@ private fun EditMemoryDialog(
                     label = { Text("Location") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
                 )
 
-                // Location history section
                 if (history.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -182,10 +194,21 @@ private fun EditMemoryDialog(
         confirmButton = {
             TextButton(
                 onClick = { if (item.isNotBlank()) onConfirm(item, location) },
-            ) { Text("Save") }
+            ) {
+                Text(
+                    "Save",
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    "Cancel",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
+        shape = MaterialTheme.shapes.large,
     )
 }

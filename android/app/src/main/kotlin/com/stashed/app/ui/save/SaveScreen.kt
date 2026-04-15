@@ -1,5 +1,6 @@
 package com.stashed.app.ui.save
 
+import android.Manifest
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -91,7 +94,6 @@ fun SaveScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Holds the temp file path for the in-flight camera capture
     val pendingCameraPath = remember { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -99,6 +101,21 @@ fun SaveScreen(
     ) { saved ->
         if (saved) pendingCameraPath.value?.let { viewModel.addMediaPath(it) }
         pendingCameraPath.value = null
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            val file = createMediaFile(context)
+            pendingCameraPath.value = file.absolutePath
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file,
+            )
+            cameraLauncher.launch(uri)
+        }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -119,12 +136,10 @@ fun SaveScreen(
         }
     }
 
-    // Auto-focus the text field on first composition
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 
-    // Show error in snackbar
     LaunchedEffect(uiState) {
         if (uiState is SaveUiState.Error) {
             snackbarHostState.showSnackbar((uiState as SaveUiState.Error).message)
@@ -168,7 +183,12 @@ fun SaveScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
-                placeholder = { Text("Where did you put it?") },
+                placeholder = {
+                    Text(
+                        "Where did you put it?",
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                },
                 minLines = 2,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(
@@ -179,28 +199,29 @@ fun SaveScreen(
                     onDone = { viewModel.saveMemory() },
                 ),
                 shape = MaterialTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                ),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Media attachment controls
             val atLimit = selectedPaths.size >= 5
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 FilledIconButton(
                     onClick = {
-                        val file = createMediaFile(context)
-                        pendingCameraPath.value = file.absolutePath
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.provider",
-                            file,
-                        )
-                        cameraLauncher.launch(uri)
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     },
                     enabled = !atLimit,
                     modifier = Modifier.size(44.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 ) {
                     Icon(
@@ -219,6 +240,7 @@ fun SaveScreen(
                     modifier = Modifier.size(44.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 ) {
                     Icon(
@@ -232,14 +254,13 @@ fun SaveScreen(
                         text = "${selectedPaths.size}/5",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.CenterVertically),
                     )
                 }
             }
 
-            // Thumbnail strip for selected media
+            // Thumbnail strip
             if (selectedPaths.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(selectedPaths) { path ->
                         Box(modifier = Modifier.size(72.dp)) {
@@ -254,14 +275,14 @@ fun SaveScreen(
                             IconButton(
                                 onClick = { viewModel.removeMediaPath(path) },
                                 modifier = Modifier
-                                    .size(20.dp)
+                                    .size(22.dp)
                                     .align(Alignment.TopEnd),
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Remove",
                                     tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(14.dp),
                                 )
                             }
                         }
@@ -271,7 +292,7 @@ fun SaveScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Parse preview card — appears with a slide-in animation
+            // Parse preview card
             AnimatedVisibility(
                 visible = preview != null,
                 enter = fadeIn() + slideInVertically { it / 2 },
@@ -290,11 +311,8 @@ fun SaveScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(text = p.emoji, fontSize = 32.sp)
-                            Column(
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .weight(1f),
-                            ) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = p.item,
                                     style = MaterialTheme.typography.bodyLarge,
@@ -315,11 +333,11 @@ fun SaveScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Action row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Mic button
                 FilledIconButton(
                     onClick = {
                         if (isListening) viewModel.speechInput.stop()
@@ -339,7 +357,6 @@ fun SaveScreen(
                     )
                 }
 
-                // Stash it button
                 Button(
                     onClick = viewModel::saveMemory,
                     modifier = Modifier
@@ -347,6 +364,9 @@ fun SaveScreen(
                         .height(52.dp),
                     enabled = inputText.isNotBlank() && uiState !is SaveUiState.Saving,
                     shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
                 ) {
                     if (uiState is SaveUiState.Saving) {
                         CircularProgressIndicator(

@@ -50,6 +50,9 @@ fun MemoryCard(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -75,22 +78,28 @@ fun MemoryCard(
                     }
                     Text(
                         text = relativeTime(entity.createdAt),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
                     )
                 }
 
                 if (similarity != null) {
-                    Text(
-                        text = "${(similarity * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${(similarity * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = matchLabel(similarity),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
-            // Media thumbnails — shown when the memory has attached photos/videos
+            // Media thumbnails
             val mediaPaths = decodePaths(entity.mediaPaths)
             if (mediaPaths.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -108,14 +117,13 @@ fun MemoryCard(
                 }
             }
 
-            // Similarity bar — shown only for search results
+            // Similarity bar
             AnimatedVisibility(
                 visible = similarity != null,
                 enter = fadeIn() + expandVertically(),
             ) {
                 similarity?.let { score ->
-                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                        // Visual similarity bar
+                    Column(modifier = Modifier.padding(top = 10.dp)) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -132,11 +140,11 @@ fun MemoryCard(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = matchExplanation(entity, score),
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                         )
                     }
@@ -146,19 +154,20 @@ fun MemoryCard(
     }
 }
 
+private fun matchLabel(score: Float): String = when {
+    score >= 0.8f -> "Strong match"
+    score >= 0.5f -> "Moderate match"
+    score >= 0.3f -> "Partial match"
+    else -> "Low match"
+}
+
 private fun matchExplanation(entity: MemoryEntity, score: Float): String {
-    val confidence = when {
-        score >= 0.8f -> "Strong match"
-        score >= 0.5f -> "Good match"
-        score >= 0.3f -> "Partial match"
-        else -> "Weak match"
-    }
     val via = if (entity.location.isNotBlank()) {
         "via \"${entity.item}\" in \"${entity.location}\""
     } else {
         "via \"${entity.item}\""
     }
-    return "$confidence — $via"
+    return "$via"
 }
 
 private fun relativeTime(timestamp: Long): String {

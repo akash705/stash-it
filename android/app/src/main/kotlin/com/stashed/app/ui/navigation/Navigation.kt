@@ -2,11 +2,13 @@ package com.stashed.app.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,12 +19,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.stashed.app.billing.BillingManager
 import com.stashed.app.data.local.PreferencesManager
+import com.stashed.app.ui.detail.MemoryDetailScreen
 import com.stashed.app.ui.list.MemoryListScreen
 import com.stashed.app.ui.onboarding.OnboardingScreen
 import com.stashed.app.ui.save.SaveScreen
@@ -38,6 +43,7 @@ sealed class Screen(val route: String, val label: String) {
     data object Save : Screen("save", "Stash")
     data object Search : Screen("search", "Search")
     data object List : Screen("list", "All")
+    data object Detail : Screen("detail/{memoryId}", "Detail")
 }
 
 private val bottomNavItems = listOf(Screen.Save, Screen.Search, Screen.List)
@@ -51,7 +57,7 @@ class NavigationViewModel @Inject constructor(
         .stateIn(
             scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main),
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null, // null = loading, don't render yet
+            initialValue = null,
         )
 }
 
@@ -63,31 +69,40 @@ fun StashedNavHost(viewModel: NavigationViewModel = hiltViewModel()) {
     val currentDestination = navBackStackEntry?.destination
     val scope = rememberCoroutineScope()
 
-    // Wait for DataStore to load before rendering
     val onboardingDone = isOnboardingComplete ?: return
 
     val startDestination = if (onboardingDone) Screen.Save.route else Screen.Onboarding.route
-    val showBottomBar = currentDestination?.route != Screen.Onboarding.route
+    val showBottomBar = currentDestination?.route != Screen.Onboarding.route &&
+            currentDestination?.route != Screen.Detail.route
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
                     bottomNavItems.forEach { screen ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                         NavigationBarItem(
                             icon = {
                                 Icon(
                                     imageVector = when (screen) {
                                         Screen.Save -> Icons.Default.Add
                                         Screen.Search -> Icons.Default.Search
-                                        Screen.List -> Icons.Default.List
+                                        Screen.List -> Icons.AutoMirrored.Filled.List
                                         else -> Icons.Default.Add
                                     },
                                     contentDescription = screen.label,
                                 )
                             },
-                            label = { Text(screen.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            label = {
+                                Text(
+                                    screen.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                            selected = selected,
                             onClick = {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -97,6 +112,13 @@ fun StashedNavHost(viewModel: NavigationViewModel = hiltViewModel()) {
                                     restoreState = true
                                 }
                             },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
                         )
                     }
                 }
@@ -120,7 +142,20 @@ fun StashedNavHost(viewModel: NavigationViewModel = hiltViewModel()) {
                 )
             }
             composable(Screen.Save.route) { SaveScreen(innerPadding, viewModel.billingManager) }
-            composable(Screen.Search.route) { SearchScreen(innerPadding) }
+            composable(Screen.Search.route) {
+                SearchScreen(
+                    paddingValues = innerPadding,
+                    onMemoryClick = { memoryId ->
+                        navController.navigate("detail/$memoryId")
+                    },
+                )
+            }
+            composable(
+                route = Screen.Detail.route,
+                arguments = listOf(navArgument("memoryId") { type = NavType.StringType }),
+            ) {
+                MemoryDetailScreen(onBack = { navController.popBackStack() })
+            }
             composable(Screen.List.route) { MemoryListScreen(innerPadding) }
         }
     }

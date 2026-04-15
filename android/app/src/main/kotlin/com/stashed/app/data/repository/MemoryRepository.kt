@@ -40,6 +40,8 @@ class MemoryRepository @Inject constructor(
 
     suspend fun getCount(): Int = dao.getCount()
 
+    suspend fun getById(id: String): MemoryEntity? = dao.getById(id)
+
     // ── Save ──────────────────────────────────────────────────────────────────
 
     /**

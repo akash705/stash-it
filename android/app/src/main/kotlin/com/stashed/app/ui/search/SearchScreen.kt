@@ -3,6 +3,7 @@ package com.stashed.app.ui.search
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +37,7 @@ import com.stashed.app.ui.components.MemoryCard
 @Composable
 fun SearchScreen(
     paddingValues: PaddingValues,
+    onMemoryClick: (String) -> Unit = {},
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsState()
@@ -59,11 +62,26 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
-            placeholder = { Text("Where are my keys?") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            placeholder = {
+                Text(
+                    "Where are my keys?",
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             shape = MaterialTheme.shapes.large,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            ),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -73,7 +91,7 @@ fun SearchScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("🔍", style = MaterialTheme.typography.headlineLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "Search for anything you've stashed",
                             style = MaterialTheme.typography.bodyMedium,
@@ -85,7 +103,9 @@ fun SearchScreen(
 
             SearchUiState.Loading -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
 
@@ -93,7 +113,7 @@ fun SearchScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("🤔", style = MaterialTheme.typography.headlineLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "Nothing found for \"$query\"",
                             style = MaterialTheme.typography.bodyMedium,
@@ -104,11 +124,19 @@ fun SearchScreen(
             }
 
             is SearchUiState.Results -> {
+                Text(
+                    text = "SEMANTIC MATCHES",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
                 LazyColumn {
                     items(state.items, key = { it.entity.id }) { result ->
                         MemoryCard(
                             entity = result.entity,
                             similarity = result.similarity,
+                            onClick = { onMemoryClick(result.entity.id) },
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
