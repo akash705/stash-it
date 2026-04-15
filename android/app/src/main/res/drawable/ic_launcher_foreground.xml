@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Box/package icon centered in adaptive icon safe zone (72x72 centered in 108x108) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L74,42 L74,66 L54,78 L34,66 L34,42 Z" />
+    <path
+        android:fillColor="#E8EAFF"
+        android:pathData="M54,30 L74,42 L74,66 L54,78 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L34,42 L34,66 L54,78 Z" />
+    <path
+        android:strokeColor="#4A6CF7"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M54,30 L74,42 L74,66 L54,78 L34,66 L34,42 Z" />
+    <!-- Middle horizontal line -->
+    <path
+        android:strokeColor="#4A6CF7"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M34,42 L54,54 L74,42" />
+    <!-- Vertical center line -->
+    <path
+        android:strokeColor="#4A6CF7"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M54,54 L54,78" />
+</vector>
