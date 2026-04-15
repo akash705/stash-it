@@ -87,17 +87,18 @@ class MemoryRepository @Inject constructor(
     /**
      * Search pipeline with three tiers:
      *   1. Semantic vector search (sqlite-vec) — best quality, needs native lib
-     *   2. LIKE search on the memories table — always works, no virtual tables needed
+     *   2. In-memory cosine similarity — same quality, loads all embeddings into RAM
+     *   3. LIKE search on the memories table — keyword fallback, always works
      */
     suspend fun search(query: String, limit: Int = 5): List<SearchResult> {
         return if (isVecTableAvailable()) {
             try {
                 vectorSearch(query, limit)
             } catch (_: Exception) {
-                likeSearch(query, limit)
+                embeddingSearch(query, limit)
             }
         } else {
-            likeSearch(query, limit)
+            embeddingSearch(query, limit)
         }
     }
 
@@ -130,10 +131,35 @@ class MemoryRepository @Inject constructor(
         val rawQuery = SimpleSQLiteQuery(sql, arrayOf(blob))
         val entities = dao.vectorSearch(rawQuery)
 
-        // Cosine distance from sqlite-vec is in [0, 2]; convert to similarity [0, 1]
-        return entities.mapIndexed { index, entity ->
-            SearchResult(entity = entity, similarity = 1f - (index.toFloat() / limit))
+        // Re-compute actual cosine similarity against each returned entity
+        return entities.mapNotNull { entity ->
+            val storedEmbedding = blobToFloatArray(entity.embedding ?: return@mapNotNull null)
+            val sim = cosineSimilarity(queryEmbedding, storedEmbedding)
+            SearchResult(entity = entity, similarity = sim)
+        }.filter { it.similarity != null && it.similarity > 0.2f }
+    }
+
+    /**
+     * In-memory cosine similarity search. Loads all embedded memories and ranks
+     * by similarity to the query embedding. Used when sqlite-vec is unavailable.
+     */
+    private suspend fun embeddingSearch(query: String, limit: Int): List<SearchResult> {
+        val queryEmbedding = embedder.embed(query)
+        val allMemories = dao.getAllWithEmbeddings()
+
+        if (allMemories.isEmpty()) {
+            return likeSearch(query, limit)
         }
+
+        return allMemories
+            .mapNotNull { entity ->
+                val storedEmbedding = blobToFloatArray(entity.embedding ?: return@mapNotNull null)
+                val sim = cosineSimilarity(queryEmbedding, storedEmbedding)
+                SearchResult(entity = entity, similarity = sim)
+            }
+            .filter { it.similarity != null && it.similarity > 0.2f }
+            .sortedByDescending { it.similarity }
+            .take(limit)
     }
 
     private suspend fun likeSearch(query: String, limit: Int): List<SearchResult> {
@@ -299,6 +325,25 @@ class MemoryRepository @Inject constructor(
         val buffer = ByteBuffer.allocate(floats.size * 4).order(ByteOrder.LITTLE_ENDIAN)
         floats.forEach { buffer.putFloat(it) }
         return buffer.array()
+    }
+
+    private fun blobToFloatArray(blob: ByteArray): FloatArray {
+        val buffer = ByteBuffer.wrap(blob).order(ByteOrder.LITTLE_ENDIAN)
+        return FloatArray(blob.size / 4) { buffer.getFloat() }
+    }
+
+    private fun cosineSimilarity(a: FloatArray, b: FloatArray): Float {
+        if (a.size != b.size) return 0f
+        var dot = 0f
+        var normA = 0f
+        var normB = 0f
+        for (i in a.indices) {
+            dot += a[i] * b[i]
+            normA += a[i] * a[i]
+            normB += b[i] * b[i]
+        }
+        val denom = kotlin.math.sqrt(normA) * kotlin.math.sqrt(normB)
+        return if (denom > 0f) dot / denom else 0f
     }
 }
 

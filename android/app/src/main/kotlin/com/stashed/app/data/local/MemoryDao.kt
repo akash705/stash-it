@@ -33,6 +33,10 @@ interface MemoryDao {
     @Query("SELECT * FROM memories WHERE embedding IS NULL")
     suspend fun getUnembedded(): List<MemoryEntity>
 
+    /** All memories that have an embedding — used for in-memory cosine similarity search. */
+    @Query("SELECT * FROM memories WHERE embedding IS NOT NULL")
+    suspend fun getAllWithEmbeddings(): List<MemoryEntity>
+
     // ── FTS5 keyword search (used before MiniLM model is available) ───────────
     // Uses @RawQuery because memories_fts is a virtual table created at runtime,
     // not through Room annotations, so Room can't verify it at compile time.
